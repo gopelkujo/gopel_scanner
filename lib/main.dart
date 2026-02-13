@@ -1,6 +1,15 @@
-import 'package:flutter/material.dart';
+import 'dart:ui';
 
-void main() {
+import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+import 'package:gopel_scanner/widgets/camera_layout_widget.dart';
+import 'package:gopel_scanner/widgets/initializing_camera_loading_widget.dart';
+
+late List<CameraDescription> _cameras;
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  _cameras = await availableCameras();
   runApp(const MainApp());
 }
 
@@ -9,89 +18,105 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        backgroundColor: Colors.grey.shade100,
-        body: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome,',
-                            style: TextStyle(
-                              fontSize: 24.0,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          Text(
-                            'User One',
-                            style: TextStyle(
-                              fontSize: 16.0,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
+    return MaterialApp(home: HomeScreen());
+  }
+}
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late CameraController controller;
+
+  String? cameraErrorCode;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = CameraController(_cameras[0], ResolutionPreset.max);
+    controller
+        .initialize()
+        .then((_) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {});
+        })
+        .catchError((Object e) {
+          if (e is CameraException) {
+            switch (e.code) {
+              case 'CameraAccessDenied':
+                cameraErrorCode = e.code;
+                setState(() {});
+                break;
+              default:
+                // Handle other errors here.
+                break;
+            }
+          }
+        });
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isCameraInitialized = controller.value.isInitialized;
+
+    return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+      body: SafeArea(
+        child:
+            isCameraInitialized
+                ? CameraLayoutWidget(cameraController: controller)
+                : cameraErrorCode != null
+                // TODO: add inform user if camera access denied.
+                ? Center(child: Text('Camera access denied'))
+                : InitializingCameraLoadingWidget(),
+      ),
+      floatingActionButton: ClipRect(
+        clipBehavior: Clip.hardEdge,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+          child: Container(
+            padding: const EdgeInsets.all(16.0),
+            color: Colors.white54,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12.0)),
                     ),
-                    // Dummy profile image.
-                    Container(
-                      width: 50.0,
-                      height: 50.0,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.grey.shade300,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24.0),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    spacing: 16.0,
-                    children: [
-                      Expanded(child: _buildMenuItem(label: 'MRZ')),
-                      Expanded(child: _buildMenuItem(label: 'Fingerprint')),
-                      Expanded(child: _buildMenuItem(label: 'NFC')),
-                    ],
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
                   ),
+                  onPressed: () {},
+                  label: const Text(
+                    'Open from file',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  icon: const Icon(Icons.folder_open_rounded),
                 ),
-              ),
-              const SizedBox(height: 24.0),
-              Text('Gopel Kujo © 2025', style: TextStyle(color: Colors.grey)),
-              const SizedBox(height: 24.0),
-            ],
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.help_rounded),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildMenuItem({required String label}) {
-    return ElevatedButton(
-      onPressed: () {
-        // TODO: Add on pressed menu item here.
-      },
-      style: ElevatedButton.styleFrom(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(10.0)),
-        ),
-        elevation: 0.0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-      ),
-      child: Text(label),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 }
