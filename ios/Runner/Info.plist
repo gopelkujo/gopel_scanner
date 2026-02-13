@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>We need access to your camera to scan document.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need access to your microphone to scan document. Not using microphone but required for opening camera device.</string>
 </dict>
 </plist>
